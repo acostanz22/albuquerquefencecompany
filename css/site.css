@@ -558,6 +558,22 @@ body.nav-open .site-nav {
 
 .footer-grid { display: grid; gap: 1.4rem; }
 
+.hours-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0;
+  color: rgba(244, 241, 234, 0.86);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.hours-list > div {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, auto) 1fr;
+  column-gap: 1.25rem;
+  align-items: baseline;
+}
+
 .site-footer h2 {
   margin: 0 0 0.45rem;
   font-size: 0.95rem;
@@ -725,7 +741,7 @@ body.nav-open .site-nav {
   .story { grid-template-columns: 280px minmax(0, 1fr); }
   .story img { height: 210px; }
   .split, .place-grid, .band-inner, .contact-grid { grid-template-columns: 1fr 1fr; }
-  .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
   .service-gallery { grid-template-columns: 1fr 1fr; }
   .service-shot img { height: 260px; }
   .service-layout {
@@ -740,6 +756,7 @@ body.nav-open .site-nav {
 }
 
 @media (min-width: 1040px) {
+  .footer-grid { grid-template-columns: 1fr 1fr 1fr 1.15fr; }
   .brand span { font-size: 1.12rem; }
   .service-list { grid-template-columns: repeat(3, 1fr); }
   .factor-grid { grid-template-columns: repeat(4, 1fr); }

@@ -162,6 +162,15 @@ def nav(current, estimate):
 </div>"""
 
 
+OFFICE_HOURS_DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+OFFICE_HOURS_TIME = "7 am – 7 pm"
+
+
+def office_hours_block():
+    rows = "".join(f"<div><span>{day}</span><span>{OFFICE_HOURS_TIME}</span></div>" for day in OFFICE_HOURS_DAYS)
+    return f'<div class="hours-list">{rows}</div>'
+
+
 def footer(estimate):
     services = "\n".join(f'<li><a href="{s["href"]}">{s["nav"]}</a></li>' for s in C.SERVICES)
     return f"""<footer class="site-footer">
@@ -192,6 +201,10 @@ def footer(estimate):
           <li><a href="/services.html">All services</a></li>
           <li><a href="{estimate}">Request an estimate</a></li>
         </ul>
+      </div>
+      <div>
+        <h2>Office Hours</h2>
+        {office_hours_block()}
       </div>
     </div>
     <p class="legal">{NAME}. Albuquerque, New Mexico. Call <a href="tel:{TEL}">{PHONE}</a>.</p>
