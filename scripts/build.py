@@ -14,6 +14,17 @@ TEL = C.PHONE_TEL
 HOST = C.HOST
 NAME = C.NAME
 OG = f"{HOST}/images/vinyl-privacy.jpg"
+OFFICE_HOURS = "Monday–Sunday: 7 am – 7 pm"
+PHONE_ICON = (
+    '<svg class="phone-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    '<path fill="currentColor" d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.3 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.3 1.1L6.6 10.8z"/>'
+    "</svg>"
+)
+
+
+def phone_link(extra_class=""):
+    cls = "phone-link" + (f" {extra_class}" if extra_class else "")
+    return f'<a class="{cls}" href="tel:{TEL}">{PHONE_ICON}<strong>{PHONE}</strong></a>'
 
 
 def paras(items):
@@ -357,46 +368,81 @@ def related_block(current_href):
 </section>"""
 
 
+def service_gallery(primary, others):
+    shots = [
+        f'<figure class="service-shot"><img src="{primary["image"]}" alt="{primary["alt"]}" width="{primary["w"]}" height="{primary["h"]}" loading="lazy" decoding="async"></figure>'
+    ]
+    for o in others:
+        if o["href"] == primary["href"]:
+            continue
+        shots.append(
+            f'<figure class="service-shot"><img src="{o["image"]}" alt="{o["alt"]}" width="{o["w"]}" height="{o["h"]}" loading="lazy" decoding="async"></figure>'
+        )
+        if len(shots) >= 2:
+            break
+    return f'<div class="service-gallery">{"".join(shots)}</div>'
+
+
 def build_service(s):
     estimate = "/contact.html#quote"
-    body = f"""{page_hero(crumbs([("Home", "/"), ("Services", "/services.html"), (s["nav"], None)]), s["h1"], s["intro"], estimate)}
-<section class="section">
-  <div class="wrap story">
-    <img src="{s["image"]}" alt="{s["alt"]}" width="{s["w"]}" height="{s["h"]}" loading="lazy" decoding="async">
-    <div>
-      <h2>{s["when_h"]}</h2>
-      {paras(s["when"])}
-    </div>
+    seo = s.get("seo_sections") or [
+        ("Where this fence fits local lots", s.get("fit") or s["intro"]),
+        ("Materials and styles", "The estimate names the height, style, gate count, and anything on the line that changes the dig: slope, caliche, trees, and tear-out. We do not publish a flat price per foot."),
+        ("Repair versus a new run", "Sound posts can take a repair. Posts that have failed at the ground usually mean a new line is the clearer job. We will say which one it is after we see the fence."),
+        ("What an estimate covers", "Length, height, style, gates, post method, access, and removal of any existing fence that has to come out. Call " + PHONE + " or use the form with the town and a rough foot count."),
+    ]
+    seo_html = "".join(f"<h2>{title}</h2>{paras([body] if isinstance(body, str) else body)}" for title, body in seo)
+    related = "".join(f'<li><a href="{href}">{label}</a></li>' for label, href in other_services(s["href"])[:4])
+    towns = chips(place_links())
+    body = f"""<div class="crumb-bar"><div class="wrap">{crumbs([("Home", "/"), ("Services", "/services.html"), (s["nav"], None)])}</div></div>
+<section class="hero slim-hero service-hero">
+  <div class="wrap service-hero-inner">
+    <p class="eyebrow">{s["nav"]}</p>
+    <h1>{s["h1"]}</h1>
+    <p class="lede">{s["intro"]}</p>
+    {hero_buttons(estimate)}
   </div>
 </section>
-<section class="section section-alt">
+<section class="section service-body">
+  <div class="wrap service-layout">
+    <div class="service-main">
+      {service_gallery(s, C.SERVICES)}
+      <div class="prose service-copy">
+        <h2>{s["when_h"]}</h2>
+        {paras(s["when"])}
+        {seo_html}
+        <h2>{s["process_h"]}</h2>
+        <p>{s["process_lead"]}</p>
+        {steps(s["steps"])}
+        <h2>{s["cost_h"]}</h2>
+        <p>{s["cost_lead"]}</p>
+        {factors(s["costs"])}
+        <h2>{s["faq_h"]}</h2>
+        {faq_block(s["faqs"])}
+      </div>
+    </div>
+    <aside class="service-aside" aria-label="Estimate and related services">
+      <div class="side-card" id="quote">
+        <p class="side-kicker">Talk through the line</p>
+        <p>Call or send the lot details. We will tell you if the job is a repair, a replacement, or a different material than you started with.</p>
+        <p class="side-phone">{phone_link("phone-link-lg")}</p>
+        <p class="side-hours">{OFFICE_HOURS}</p>
+        <p><a class="btn btn-solid" href="{estimate}">Estimate form</a></p>
+      </div>
+      <div class="side-card side-card-muted">
+        <p class="side-kicker">Related</p>
+        <ul class="side-links">{related}</ul>
+      </div>
+    </aside>
+  </div>
+</section>
+<section class="section section-towns" style="padding-top:0">
   <div class="wrap">
-    <div class="section-head">
-      <h2>{s["process_h"]}</h2>
-      <p>{s["process_lead"]}</p>
-    </div>
-    {steps(s["steps"])}
+    <h2>Towns we serve</h2>
+    {towns}
+    <p><a class="details" href="/service-areas.html">Service area</a> · <a class="details" href="{estimate}">Request an estimate</a> · <a class="details" href="/services.html">All services</a></p>
   </div>
-</section>
-<section class="section">
-  <div class="wrap">
-    <div class="section-head">
-      <h2>{s["cost_h"]}</h2>
-      <p>{s["cost_lead"]}</p>
-    </div>
-    {factors(s["costs"])}
-  </div>
-</section>
-<section class="section section-alt">
-  <div class="wrap">
-    <div class="section-head">
-      <h2>{s["faq_h"]}</h2>
-    </div>
-    {faq_block(s["faqs"])}
-  </div>
-</section>
-{related_block(s["href"])}
-{cta("Get a fence estimate", "Call " + PHONE + " or send the form. Name the material, the town, about how many feet, and the gates. Estimates are free, and the price comes after we see the line.")}"""
+</section>"""
     return {
         "path": s["href"],
         "title": s["title"],
