@@ -823,3 +823,113 @@ body.nav-open .site-nav {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* Slim interior headers, gallery, reviews CTA, footer brand */
+.hero-copy { min-width: 0; }
+
+.slim-hero {
+  background: var(--slate);
+  color: #f4f1ea;
+}
+
+.slim-hero .hero-grid { padding: 1.6rem 0 2rem; }
+
+.slim-hero h1 {
+  max-width: none;
+  font-size: clamp(1.85rem, 4vw, 2.6rem);
+}
+
+.slim-hero .lede { font-size: 1.05rem; max-width: 46rem; }
+
+.slim-hero .quote-card { margin-top: 1.25rem; }
+
+.note-wide { max-width: 72ch; }
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.gallery-item {
+  margin: 0;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--slate-2);
+  aspect-ratio: 4 / 3;
+}
+
+.gallery-item a { display: block; height: 100%; }
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.25s ease;
+}
+
+.gallery-item a:hover img { transform: scale(1.03); }
+
+.gallery-item figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.6rem 0.8rem 0.6rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  background: linear-gradient(to top, rgba(16, 22, 29, 0.85), rgba(16, 22, 29, 0));
+  pointer-events: none;
+}
+
+.reviews-cta {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1.25rem 1.3rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.reviews-cta p { margin: 0; max-width: 60ch; }
+
+.footer-brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.6rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.14);
+}
+
+.footer-brand p { margin: 0; max-width: 46ch; }
+
+.footer-brand .brand:hover { text-decoration: none; }
+
+.service-card h3 a { overflow-wrap: anywhere; }
+
+@media (min-width: 700px) {
+  .gallery-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+}
+
+@media (min-width: 1040px) {
+  .slim-hero .hero-grid {
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: start;
+    padding: 2rem 0 2.4rem;
+  }
+  .slim-hero .quote-card { margin-top: 0; }
+}
+
+@media (max-width: 480px) {
+  .hero-actions .btn { flex: 1 1 100%; }
+  .reviews-cta .btn { width: 100%; }
+  .quote-card { padding-inline: 0.75rem; }
+}

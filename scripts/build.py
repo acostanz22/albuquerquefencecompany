@@ -1,5 +1,6 @@
 """Generate the static site from scripts/content.py."""
 
+import html as htmllib
 import json
 import re
 import sys
@@ -98,7 +99,7 @@ def cta(heading, text):
     <div class="band-panel">
       <a class="band-phone" href="tel:{TEL}">{PHONE}</a>
       <div class="cta-actions">
-        <a class="btn btn-solid" href="/contact.html#quote">Request an estimate</a>
+        <a class="btn btn-solid" href="#quote">Request a free quote</a>
         <a class="btn btn-ghost" href="tel:{TEL}">Call now</a>
       </div>
     </div>
@@ -175,6 +176,13 @@ def footer(estimate):
     services = "\n".join(f'<li><a href="{s["href"]}">{s["nav"]}</a></li>' for s in C.SERVICES)
     return f"""<footer class="site-footer">
   <div class="wrap">
+    <div class="footer-brand">
+      <a class="brand" href="/">
+        <img src="/images/mark.svg" alt="" width="64" height="64">
+        <span>{C.BRAND_LINE}<small>{C.BRAND_SMALL}</small></span>
+      </a>
+      <p>{NAME} installs and repairs fences in Albuquerque, NM and nearby towns. Call <a href="tel:{TEL}">{PHONE}</a>.</p>
+    </div>
     <div class="footer-grid">
       <div>
         <h2>Company</h2>
@@ -290,21 +298,20 @@ def graph(page):
 
 
 def shell(page):
-    estimate = "/contact.html#quote" if page["path"] != "/" else "/#quote"
-    if page["path"] == "/contact.html":
-        estimate = "#quote"
+    estimate = "/contact.html#quote" if page["path"] == "/404.html" else "#quote"
     ld = graph(page)
+    title = htmllib.escape(page["title"], quote=True)
     return f"""<!DOCTYPE html>
 <html class="no-js" lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{page["title"]}</title>
+<title>{title}</title>
 <meta name="description" content="{page["description"]}">
 <meta name="robots" content="{page.get("robots", "index, follow")}">
 <link rel="canonical" href="{page["canonical"]}">
 <meta property="og:site_name" content="{NAME}">
-<meta property="og:title" content="{page["title"]}">
+<meta property="og:title" content="{title}">
 <meta property="og:description" content="{page["description"]}">
 <meta property="og:url" content="{page["canonical"]}">
 <meta property="og:type" content="website">
@@ -359,13 +366,27 @@ def write_page(page):
     return dest
 
 
-def page_hero(crumb_html, h1, intro, estimate):
-    return f"""<section class="page-hero">
-  <div class="wrap">
-    {crumb_html}
-    <h1>{h1}</h1>
-    <p>{intro}</p>
-    {hero_buttons(estimate)}
+def quote_card():
+    return f"""<div class="quote-card" id="quote">
+      <p class="kicker">Free estimate</p>
+      <h2>Get a fence quote</h2>
+      {FORM}
+    </div>"""
+
+
+def slim_hero(path, crumb_items, h1, eyebrow=None):
+    """Slim interior header: breadcrumb bar, H1, 5-6 sentence intro, quote form."""
+    eb = f'<p class="eyebrow">{eyebrow}</p>' if eyebrow else ""
+    return f"""<div class="crumb-bar"><div class="wrap">{crumbs(crumb_items)}</div></div>
+<section class="hero slim-hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      {eb}
+      <h1>{h1}</h1>
+      <p class="lede">{" ".join(C.INTROS[path])}</p>
+      {hero_buttons("#quote")}
+    </div>
+    {quote_card()}
   </div>
 </section>"""
 
@@ -397,7 +418,7 @@ def service_gallery(primary, others):
 
 
 def build_service(s):
-    estimate = "/contact.html#quote"
+    estimate = "#quote"
     seo = s.get("seo_sections") or [
         ("Where this fence fits local lots", s.get("fit") or s["intro"]),
         ("Materials and styles", "The estimate names the height, style, gate count, and anything on the line that changes the dig: slope, caliche, trees, and tear-out. We do not publish a flat price per foot."),
@@ -407,15 +428,7 @@ def build_service(s):
     seo_html = "".join(f"<h2>{title}</h2>{paras([body] if isinstance(body, str) else body)}" for title, body in seo)
     related = "".join(f'<li><a href="{href}">{label}</a></li>' for label, href in other_services(s["href"])[:4])
     towns = chips(place_links())
-    body = f"""<div class="crumb-bar"><div class="wrap">{crumbs([("Home", "/"), ("Services", "/services.html"), (s["nav"], None)])}</div></div>
-<section class="hero slim-hero service-hero">
-  <div class="wrap service-hero-inner">
-    <p class="eyebrow">{s["nav"]}</p>
-    <h1>{s["h1"]}</h1>
-    <p class="lede">{s["intro"]}</p>
-    {hero_buttons(estimate)}
-  </div>
-</section>
+    body = f"""{slim_hero(s["href"], [("Home", "/"), ("Services", "/services.html"), (s["nav"], None)], s["h1"], s["nav"])}
 <section class="section service-body">
   <div class="wrap service-layout">
     <div class="service-main">
@@ -435,7 +448,7 @@ def build_service(s):
       </div>
     </div>
     <aside class="service-aside" aria-label="Estimate and related services">
-      <div class="side-card" id="quote">
+      <div class="side-card">
         <p class="side-kicker">Talk through the line</p>
         <p>Call or send the lot details. We will tell you if the job is a repair, a replacement, or a different material than you started with.</p>
         <p class="side-phone">{phone_link("phone-link-lg")}</p>
@@ -449,7 +462,7 @@ def build_service(s):
     </aside>
   </div>
 </section>
-<section class="section section-towns" style="padding-top:0">
+<section class="section section-alt section-towns">
   <div class="wrap">
     <h2>Towns we serve</h2>
     {towns}
@@ -471,8 +484,8 @@ def build_service(s):
 def build_place(p):
     if "h1" not in p:
         return None
-    estimate = "/contact.html#quote"
-    body = f"""{page_hero(crumbs([("Home", "/"), ("Service areas", "/service-areas.html"), (p["name"], None)]), p["h1"], p["intro"], estimate)}
+    estimate = "#quote"
+    body = f"""{slim_hero(p["href"], [("Home", "/"), ("Service areas", "/service-areas.html"), (p["name"], None)], p["h1"], p["name"])}
 <section class="section">
   <div class="wrap story">
     <img src="{p["image"]}" alt="{p["alt"]}" width="{p["w"]}" height="{p["h"]}" loading="lazy" decoding="async">
@@ -514,91 +527,127 @@ def build_place(p):
     }
 
 
+def gallery_block():
+    figs = []
+    seen = set()
+    for s in C.SERVICES:
+        if s["image"] in seen:
+            continue
+        seen.add(s["image"])
+        figs.append(
+            f'<figure class="gallery-item"><a href="{s["href"]}"><img src="{s["image"]}" alt="{s["alt"]}" width="{s["w"]}" height="{s["h"]}" loading="lazy" decoding="async"></a>'
+            f'<figcaption>{s["nav"]}</figcaption></figure>'
+        )
+    return '<div class="gallery-grid">\n' + "\n".join(figs) + "\n</div>"
+
+
+HOME_WHY = [
+    ("Every fence type in one place", "Vinyl, wood, chain link, aluminum, metal, picket, farm fence, gates, and commercial fencing, for houses, businesses, and acreage."),
+    ("Estimates built from your property", "We ask for the length, material, gates, and the ground, so the number fits your line instead of a flat rate per foot."),
+    ("Straight repair or replace advice", "If the posts are still sound, a repair may be enough. If they are not, we will say a new run is the clearer job."),
+    ("Easy to reach", "Call (505) 210-9903 any day from 7 am to 7 pm, or send the quote form and tell us the town, material, and rough footage."),
+]
+
+HOME_STEPS = [
+    ("Request a quote", "Send the form or call (505) 210-9903 with your town, the fence material, and a rough length."),
+    ("Discuss and look at the site", "We talk through the style, gates, and goals, and look at the line at your property."),
+    ("Get your estimate", "The estimate lists the length, material, gates, and any tear-out, so you can see what the price covers."),
+    ("Schedule the installation", "Once you approve the estimate, we schedule the install and build the fence."),
+]
+
+
 def build_home():
     parts = [f'<a href="{s["href"]}">{s["nav"].lower()}</a>' for s in C.SERVICES]
     inline = ", ".join(parts[:-1]) + ", and " + parts[-1]
+    intro = " ".join(C.HOME_INTRO)
     body = f"""<section class="hero">
   <div class="wrap hero-grid">
-    <div>
-      <p class="eyebrow">Albuquerque, New Mexico</p>
-      <h1>Fence Company in Albuquerque, NM</h1>
-      <p class="lede">Albuquerque Fence Company installs and repairs fences for houses, businesses, and acreage in Albuquerque and the towns around it. The price follows the length of the line, the material, the gates, and whether the posts hit caliche or have to stand in the wind.</p>
-      {hero_buttons("/#quote")}
+    <div class="hero-copy">
+      <h1>Fence Company Albuquerque NM</h1>
+      <p class="lede">{intro}</p>
+      {hero_buttons("#quote")}
       <p class="hero-links">Services: {inline}.</p>
     </div>
-    <div class="quote-card" id="quote">
-      <p class="kicker">Free estimate</p>
-      <h2>Get a fence quote</h2>
-      {FORM}
-    </div>
+    {quote_card()}
   </div>
 </section>
-<section class="section">
+<section class="section section-alt" id="why-choose-us">
   <div class="wrap">
     <div class="section-head">
-      <p class="kicker">Our services</p>
-      <h2>Fence services</h2>
-      <p>Each card goes to its own page. The short description is the job, not a slogan.</p>
+      <p class="kicker">Why choose us</p>
+      <h2>Why Choose Us</h2>
+      <p>What working with Albuquerque Fence Company looks like.</p>
+    </div>
+    {factors(HOME_WHY)}
+  </div>
+</section>
+<section class="section" id="services">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">What we build</p>
+      <h2>Our Fence Services</h2>
+      <p>Each card goes to its own page with the details for that fence.</p>
     </div>
     {service_cards()}
   </div>
 </section>
-<section class="section section-alt">
+<section class="section section-alt" id="gallery">
   <div class="wrap">
     <div class="section-head">
-      <h2>Houses, businesses, and acreage</h2>
+      <p class="kicker">Fence styles</p>
+      <h2>Our Gallery</h2>
+      <p>Example photos of the fence styles we install. These are illustrative images, not photos of our completed projects.</p>
     </div>
-    <div class="split">
-      <article>
-        <h3>Homes</h3>
-        <p>A lot of Albuquerque yards already have a block wall. The fence job is often a <a href="/gate-installation.html">gate</a> in that opening, a <a href="/wood-fence.html">wood</a> or <a href="/vinyl-fence.html">vinyl</a> run where the wall stops, or <a href="/chain-link-fence.html">chain link</a> for a dog.</p>
-        <p>A <a href="/fence-repair.html">repair</a> is the right job when the posts are still sound. When the posts have failed at the ground, replacing the run is usually clearer than patching boards onto a lean.</p>
-      </article>
-      <article>
-        <h3>Businesses and acreage</h3>
-        <p><a href="/commercial-fencing.html">Commercial lines</a> are chain link, ornamental metal, and gates for lots, storage yards, and job sites. The pipe and the openings are specified for that traffic.</p>
-        <p><a href="/farm-fencing.html">Farm lines</a> are longer: horse rail and field fence, with a gate a truck can use. In the valley, a ditch on the line is part of the layout. Those are different products from a privacy panel.</p>
-      </article>
+    {gallery_block()}
+  </div>
+</section>
+<section class="section" id="reviews">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Customer reviews</p>
+      <h2>Customer Reviews</h2>
+    </div>
+    <div class="reviews-cta">
+      <p>We do not post customer quotes here until we can show real, verifiable feedback. Call {phone_link()} to ask questions about your fence before you decide.</p>
+      <a class="btn btn-ink" href="tel:{TEL}">Call {PHONE}</a>
     </div>
   </div>
 </section>
-<section class="section">
+<section class="section section-alt" id="process">
   <div class="wrap">
     <div class="section-head">
-      <h2>What we ask before we price a fence</h2>
-      <p>These are the facts that decide the estimate. We would rather ask them up front than invent a rate per foot.</p>
+      <p class="kicker">How it works</p>
+      <h2>Our Process</h2>
+      <p>From first call to finished fence, in four steps.</p>
     </div>
-    {factors([
-        ("How many feet", "The length is the first number. A rough measurement is enough to start, as long as it includes the corners."),
-        ("The ground", "Caliche, rock, slope, a ditch, and whether the truck can reach the line. Two of those can matter more than the style."),
-        ("Style and gates", "Privacy, picket, chain link, aluminum, steel, or farm fence, plus every gate. The style is part of the price."),
-        ("Repair or replace", "Sound posts can take a repair. A line that leans, or posts that are soft at the soil, is usually a new run."),
-    ])}
+    {steps(HOME_STEPS)}
   </div>
 </section>
-<section class="section section-alt">
+<section class="section" id="areas">
   <div class="wrap">
     <div class="section-head">
-      <h2>Service area</h2>
-      <p>We work in Albuquerque and the surrounding towns. Lot size and the fence job change from one place to the next. The <a href="/service-areas.html">service area page</a> has the detail, without a list of every neighborhood.</p>
+      <p class="kicker">Where we work</p>
+      <h2>Areas We Serve</h2>
+      <p>We install and repair fences in Albuquerque and the towns around it. Pick your town for fence details, or see the full <a href="/service-areas.html">service area page</a>.</p>
     </div>
     {chips(place_links())}
   </div>
 </section>
-<section class="section">
+<section class="section section-alt" id="faqs">
   <div class="wrap">
     <div class="section-head">
-      <h2>Fence questions</h2>
-      <p>Short answers. Material-specific questions live on each service page, and the full set is on the <a href="/faq.html">FAQ</a>.</p>
+      <p class="kicker">Common questions</p>
+      <h2>FAQs</h2>
+      <p>Short answers. Material-specific questions live on each service page, and more are on the <a href="/faq.html">FAQ page</a>.</p>
     </div>
     {faq_block(C.HOME_FAQS)}
   </div>
 </section>
-{cta("Call for a fence estimate", "Call " + PHONE + " or send the form. Tell us the town, the material, and about how many feet. Estimates are free.")}"""
+{cta("Request your free fence quote", "Send the form or call " + PHONE + ". Tell us the town, the material, and about how many feet.")}"""
     return {
         "path": "/",
-        "title": "Fence Company in Albuquerque, NM | Install and Repair",
-        "description": "Wood, vinyl, chain-link, aluminum, metal, and farm fence installation and repair in Albuquerque, NM. Call (505) 210-9903.",
+        "title": "Fence Company Albuquerque NM | Vinyl Fence, Wood Fence, Aluminum Fence & More",
+        "description": "Fence company in Albuquerque, NM for vinyl, wood, aluminum, chain-link, metal, and farm fence installation and repair. Call (505) 210-9903.",
         "canonical": HOST + "/",
         "crumbs": [("Home", None)],
         "faqs": C.HOME_FAQS,
@@ -610,7 +659,7 @@ def build_services():
     articles = []
     for s in C.SERVICES:
         articles.append(f'<article class="factor"><h3><a href="{s["href"]}">{s["nav"]}</a></h3><p>{s["fit"]}</p></article>')
-    body = f"""{page_hero(crumbs([("Home", "/"), ("Services", None)]), "Fence Services in Albuquerque, NM", "Each fence has its own page. Start with what it has to do. Privacy, a dog, a pool, livestock, a gate, and a commercial lot are not one product.", "/contact.html#quote")}
+    body = f"""{slim_hero("/services.html", [("Home", "/"), ("Services", None)], "Fence Services in Albuquerque, NM")}
 <section class="section">
   <div class="wrap">
     {service_cards()}
@@ -645,7 +694,7 @@ def build_services():
 
 
 def build_about():
-    body = f"""{page_hero(crumbs([("Home", "/"), ("About", None)]), "About Albuquerque Fence Company", "We install and repair residential, commercial, and farm fences in Albuquerque and the nearby towns. The work happens at the property. This site does not list a showroom address.", "/contact.html#quote")}
+    body = f"""{slim_hero("/about.html", [("Home", "/"), ("About", None)], "About Albuquerque Fence Company")}
 <section class="section">
   <div class="wrap story">
     <img src="/images/vinyl-privacy.jpg" alt="Gray vinyl privacy fence along a row of houses" width="800" height="534" loading="lazy" decoding="async">
@@ -682,20 +731,15 @@ def build_about():
 
 
 def build_contact():
-    body = f"""{page_hero(crumbs([("Home", "/"), ("Contact", None)]), "Contact Albuquerque Fence Company", "Call " + PHONE + " or send the form. Estimates are free. There is no published street address. The conversation is about the fence at your property.", "#quote")}
+    body = f"""{slim_hero("/contact.html", [("Home", "/"), ("Contact", None)], "Contact Albuquerque Fence Company")}
 <section class="section">
-  <div class="wrap contact-grid">
-    <div class="note">
+  <div class="wrap">
+    <div class="note note-wide">
       <h2>What to include</h2>
       <p>The town, the fence material, about how many feet, and how many gates. If a fence is already there, say whether you want it repaired or removed.</p>
       <p>Albuquerque, Rio Rancho, the villages, and the counties do not share one fence rule. Name the place so the height and the placement can be planned for that parcel.</p>
       <p><a href="tel:{TEL}">{PHONE}</a></p>
       <p><a href="/service-areas.html">Service areas</a> and <a href="/faq.html">common questions</a>.</p>
-    </div>
-    <div class="quote-card" id="quote">
-      <p class="kicker">Free estimate</p>
-      <h2>Get a fence quote</h2>
-      {FORM}
     </div>
   </div>
 </section>"""
@@ -710,7 +754,7 @@ def build_contact():
 
 
 def build_faq():
-    body = f"""{page_hero(crumbs([("Home", "/"), ("FAQ", None)]), "Fence Questions", "Five questions we hear before a fence estimate in Albuquerque. For a specific material, use the questions at the bottom of that service page.", "/contact.html#quote")}
+    body = f"""{slim_hero("/faq.html", [("Home", "/"), ("FAQ", None)], "Fence Questions")}
 <section class="section">
   <div class="wrap">
     {faq_block(C.HOME_FAQS)}
@@ -740,7 +784,7 @@ def build_areas():
   <p class="card-link"><a class="details" href="{p["href"]}">Fence details</a></p>
 </article>"""
         )
-    body = f"""{page_hero(crumbs([("Home", "/"), ("Service areas", None)]), "Fence Service Areas", "We install fences in Albuquerque and the towns around it. The pages below are about the fence work in each place, not a town history.", "/contact.html#quote")}
+    body = f"""{slim_hero("/service-areas.html", [("Home", "/"), ("Service areas", None)], "Fence Service Areas")}
 <section class="section">
   <div class="wrap">
     <div class="place-grid">
@@ -856,8 +900,21 @@ def audit(pages):
             problems.append(f"{page['path']} has {len(h1s)} h1 tags")
         if 'rel="canonical"' not in html:
             problems.append(f"{page['path']} missing canonical")
-        if len(page["title"]) > 65:
+        max_title = 80 if page["path"] == "/" else 65
+        if len(page["title"]) > max_title:
             problems.append(f"title {len(page['title'])}: {page['title']}")
+        intro = C.HOME_INTRO if page["path"] == "/" else C.INTROS.get(page["path"])
+        if intro is not None:
+            if not 5 <= len(intro) <= 6:
+                problems.append(f"{page['path']} intro has {len(intro)} sentences")
+            if not intro[0].startswith(NAME):
+                problems.append(f"{page['path']} intro must start with {NAME}")
+            if 'id="quote"' not in html:
+                problems.append(f"{page['path']} missing quote form")
+        if html.count('src="/images/mark.svg"') < 2:
+            problems.append(f"{page['path']} logo should appear in nav and footer")
+        if page["path"] == "/" and "<h1>Fence Company Albuquerque NM</h1>" not in html:
+            problems.append("home H1 mismatch")
         if not 70 <= len(page["description"]) <= 170:
             problems.append(f"desc {len(page['description'])}: {page['description']}")
         low = html.lower()
@@ -925,7 +982,7 @@ def main():
   <div class="wrap">
     <ol class="crumbs"><li><a href="/">Home</a></li><li>Page not found</li></ol>
     <h1>That page is not on this site</h1>
-    <p>The address does not match a fence page. The services list and the contact form are the way back.</p>
+    <p>Albuquerque Fence Company installs and repairs fences in Albuquerque, NM and nearby towns, but this address does not match a page on our site. The services list, the service area pages, and the contact form are the way back. You can also call (505) 210-9903 and we will point you to the right fence page.</p>
     <div class="hero-actions">
       <a class="btn btn-solid" href="/services.html">View services</a>
       <a class="btn btn-ghost" href="tel:+15052109903">Call (505) 210-9903</a>
