@@ -637,7 +637,7 @@ def build_home():
   <div class="wrap">
     <div class="section-head">
       <p class="kicker">Common questions</p>
-      <h2>FAQs</h2>
+      <h2>FAQ</h2>
       <p>Short answers. Material-specific questions live on each service page, and more are on the <a href="/faq.html">FAQ page</a>.</p>
     </div>
     {faq_block(C.HOME_FAQS)}
